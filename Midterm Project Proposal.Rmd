@@ -15,9 +15,9 @@ knitr::opts_chunk$set(comment = NA, echo = FALSE, message = FALSE,
 
 ## Personal Statement
 
-After grasuation, I plan to work in a tech company as a data scientist.This project is closely related to my future work. 
+After graduation, I plan to work in a tech company as a data scientist. This project is closely related to my future work. 
 
-The data set I select is “Data Science and STEM Salaries”, based on which I plan to build a “A two-way selection system for graduates and companies” model. As every year plenty of graduates eager to obtain STEM job offers after graduation, this data analysis will hopefully serve as a reference for graduates' future career options, since many of the companies in the data set are their wished-for companies and job occupations. The model helps for either choosing companies that satisfies with various motivation and preferences by figuring out the distribution of salaries and positions, or making graduates more in line with the requirements of these companies and some of the job positions by analyzing the preferences of company employments. As a result, it’s a good chance for me to learn more about these companies, identifying jobs that are high-probability matches to me.
+The data set I select is “Data Science and STEM Salaries”, based on which I plan to build a “A two-way selection system for graduates and companies” model. As every year plenty of graduates eager to obtain STEM job offers after graduation, this data analysis will hopefully serve as a reference for graduates' future career options, since many of the companies in the data set are their wished-for companies and job occupations. The model helps for either choosing companies that satisfies with various motivations and preferences by figuring out the distribution of salaries and positions, or making graduates more in line with the requirements of these companies and some of the job positions by analyzing the preferences of company employments. As a result, it’s a good chance for me to learn more about these companies, identifying jobs that are high-probability match to me.
 
 
 ## Questions
@@ -26,7 +26,7 @@ Given on the information in the data set, I raise following questions:
 
 1.	What are the factors affecting salary?(Analyze the relationship between salary and other variables, such as education level, rank, position, or even gender and race?)
 
-2.	Whether there exist differences in the salaries of each top company? What is the salaries distribution?
+2.	Whether there exist differences in the salaries of each top company? What are the salary distributions?
 
 3.	Are there any characteristics of the location distribution of the companies in the data set? What enlightenment will this give future job seekers who graduate?
 
@@ -44,13 +44,13 @@ This data set contains useful information such as education level, compensation 
 
 As it’s a tough work, the time arrangement exerts vital importance in this project. 
 
-- EDA: Nov.1st to Nov.7th 
+- EDA: Nov.4th to Nov.11th 
 
-- Data Processing: Nov.8th to Nov.15th 
+- Data Processing: Nov.12th to Nov.19th 
 
-- Modeling and Validation: Nov.16th to Nov. 23rd 
+- Modeling and Validation: Nov.20th to Nov. 27th
 
-- Write up: Nov.24th to Nov.30th 
+- Write up: Nov.28th to Dec.2rd
 
 
 
