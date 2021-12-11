@@ -174,7 +174,56 @@ p6<- ggplot(df_1, aes(log(totalyearlycompensation), colour= title)) +
 
 grid.arrange(p5,p6,nrow=1)
 
+
+# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each variable to show on the plot!
+
+
 # More EDA
+## Ridar plots
+## Set graphic colors
+
+df_6<- df_1 %>% filter(title=="Data Scientist" | title=="Software Engineer" |title== "Sales" | title=="Product Designer")
+#df_8<- df_6 %>% filter(title=="Sales")
+#table(df_8$yearsofexperience)
+df_7<- df_1 %>% filter(company=="amazon"|company=="microsoft"|company=="apple"|company=="facebook"|company=="google"|company=="jpmorgan chase")
+radar_data1 <- df_6 %>% group_by(title) %>% dplyr::summarise(
+  edu_level = mean(edu_level), race=mean(race),
+  yearsofexperience = mean(yearsofexperience), yearsatcompany = mean(yearsatcompany), 
+  totalyearlycompensation = mean(totalyearlycompensation)
+)
+
+radar_data2 <- df_7 %>% group_by(company) %>% dplyr::summarise(
+  edu_level = mean(edu_level), race=mean(race),
+  yearsofexperience = mean(yearsofexperience), yearsatcompany = mean(yearsatcompany), 
+  totalyearlycompensation = mean(totalyearlycompensation)
+)
+
+coul <- brewer.pal(3, "BuPu")
+colors_border <- coul
+colors_in <- alpha(coul,0.4)
+rownames(radar_data1) <- radar_data1$title
+rownames(radar_data2) <- radar_data2$company
+
+radarchart(radar_data1[,-1], axistype=1 , maxmin=F,
+           #custom polygon
+           pcol= colors_border , pfcol=colors_in , plwd=1 , plty=1,
+           #custom the grid
+           cglcol="grey", cglty=1, axislabcol="black", cglwd=1, 
+           #custom labels
+           vlcex=0.8 
+)
+legend(x= 0.7, y= 1.4, legend = rownames(radar_data1), bty = "n", pch=20, col=colors_in , text.col = "grey", cex=1, pt.cex=3)
+
+radarchart(radar_data2[,-1], axistype=1 , maxmin=F,
+           #custom polygon
+           pcol= colors_border , pfcol=colors_in , plwd=1 , plty=1,
+           #custom the grid
+           cglcol="grey", cglty=1, axislabcol="black", cglwd=1, 
+           #custom labels
+           vlcex=0.8 
+)
+legend(x= 0.7, y= 1.4, legend = rownames(radar_data2), bty = "n", pch=20, col=colors_in , text.col = "grey", cex=1, pt.cex=3)
+
 dat1<- data_salary %>% count(company)
 wordcloud2(dat1,size=3,color='random-dark')
 
@@ -250,21 +299,26 @@ p+theme_minimal() +
  
 #####################################################################
 # Model Fitting
-model2<- lmer(log(totalyearlycompensation)~ yearsofexperience + yearsatcompany + gender + race + edu_level + (1+yearsofexperience|title)+(1+ gender|title)+(1+race|title)+(1+edu_level|title)+(1+yearsatcompany|title), data=df_1)
-summary(model2)
+company_counts <- df_1 %>%
+group_by(company) %>%
+tally
+# get names of the company with counts > 120
+frequent_company <-  company_counts %>%
+filter(n >= 120) %>%
+select(company)
+# filter out the most-frequent companies
+df_3 <- df_1 %>%
+filter(company %in% frequent_company$company)
+
+model2<- stan_lmer(log(totalyearlycompensation)~ yearsofexperience + yearsatcompany + gender + race + edu_level + (1+yearsofexperience+gender+race+edu_level+yearsatcompany+title|company), data=df_3, refresh=0)
+print(model2,digit=5)
+summary(model2,digit=5)
 
 ranef(model2)
 fixef(model2)
 coef(model2)
 
 # Model Validation
-re <- plot(model2)
-qq <- qqmath(model2)
-grid.arrange(re,qq,nrow=1)
-
-ggplot(data.frame(lev=hatvalues(model2),pearson=residuals(model2,type="pearson")),
-       aes(x=lev,y=pearson)) +
-  geom_point() +
-  theme_bw()
+check_model(model2)
 
 
