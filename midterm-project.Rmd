@@ -1,7 +1,7 @@
 ---
 title: "MA678 Midterm Project"
 author: "Shicong Wang"
-date: "11/13/2021"
+date: "12/10/2021"
 output: pdf_document
 ---
 
@@ -37,7 +37,16 @@ pacman::p_load(
   "xts",
   "gridExtra",
   "lattice",
-  "lm4"
+  "lm4",
+  "performance",
+  "see",
+  "patchwork",
+  "glmmTMB",
+  "fmsb",
+  "pals",
+  "scales",
+  "RColorBrewer"
+  
 )
 
 ```
@@ -157,31 +166,7 @@ Due to the large difference in magnitude among the variables, most of the points
 
 Here some plots to see if there is correlation among job titles and companies with total yearly compensations.
 
-```{r echo=FALSE,warning=FALSE,fig.height=6,fig.width= 20,fig.cap="salary comparison in job title and company"}
-
-# salary and title(volin plot)
-dat3<- data_salary %>%
-  count(company,title,level,Education)
-p1 <- data_salary %>%# Reorder data
- ggplot( aes(x=title, y=log(totalyearlycompensation), fill=title, color=title)) +
-    geom_violin(width=2.1, size=0.2) +
-    scale_fill_viridis(discrete=TRUE) +
-    scale_color_viridis(discrete=TRUE) +
-    coord_flip() + # This switch X and Y axis and allows to get the horizontal version
-    xlab("job title") +
-    ylab("log total yearly compensation")
-
-# salary and company
-p2<- dat_company %>%
-  ggplot(aes(y=company, x=log(totalyearlycompensation), fill=company)) +
-    geom_density_ridges(alpha=0.6, stat="binline", bins=20) +
-    xlab("log total yearly compensation") +
-    ylab("company")
-grid.arrange(p1,p2,nrow=1)
-```
-The plots above respectively show the relationship between job titles, companies and total yearly compensations. Apparently, both of them exert effect on total yearly compensations. When it comes to job titles, software engineering manager and product manager seems enjoy better salary treatments. Besides, when it comes to companies, Google, Facebook and Salesforce obtain higher employees' salaries, whereas IBM's salaries are less attractive. When analyze staff salaries are related to which factors, both can be used as the basis for grouping staff.
-
-```{r,echo=FALSE,warning=FALSE,fig.height=6, fig.width= 15,fig.cap="salary comparison in gender,race,education level and work exoerience"}
+```{r,echo=FALSE,warning=FALSE,fig.height=4,fig.width= 6,fig.cap="Make comparison among education level and work experience"}
 # boxplot(salary, years of experience, education level)
 data_salary$work_experience <- ifelse(data_salary$yearsofexperience <= 1,"Graduates",
                                   ifelse(data_salary$yearsofexperience <= 5,"Novices",
@@ -190,121 +175,201 @@ data_salary$work_experience <- ifelse(data_salary$yearsofexperience <= 1,"Gradua
 df_2 <- data_salary %>% 
   na.omit() %>%
   filter(country == "United States")
-
-p3<- ggplot(df_2, aes(x =Education, y = log(totalyearlycompensation), color = work_experience)) +  # ggplot function
+df_2$logvalue<- log(df_2$totalyearlycompensation)
+mean<- mean(df_2$logvalue)
+ggplot(df_2, aes(x =Education, y = log(totalyearlycompensation), color = work_experience)) +  # ggplot function
   geom_boxplot()+
   xlab("Education Level") +
-  ylab("log total yearly experience") 
-
-# violin plot(salary, gender and race)
-p4<- ggplot(df_2,aes(fill=gender, y=log(totalyearlycompensation), x=Race)) + 
-    geom_violin(position="dodge", alpha=0.5, outlier.colour="transparent") +
-    scale_fill_viridis(discrete=T, name="") +
-    xlab("race") +
-    ylab("log total yearly experience") 
-grid.arrange(p3,p4,nrow=1)
+  ylab("log total yearly experience") +
+  geom_hline(aes(yintercept=mean),colour="blue", linetype = "twodash",size=1)+
+  theme(legend.position ="top",axis.text.x=element_text(angle=30))
 ```
-The third plot shows the correlations among total yearly compensation, years of experience and education level. The result was unexpected. Education level and years of work experience affect the salary level to a certain extent, but not exactly as we imagined. Generally speaking, a Ph.D. has a significant advantage in salary. For other education level, perhaps a higher degree has certain advantages when first enter the job, but with the accumulation of work experience, such advantages become less obvious. Of course, more work experience does mean more salaries in this plot.
-The forth plot make comparisons of total yearly compensation among race and gender.To relief, neither of these factors have a significant impact on salary.It can be seen that male employees have certain advantages in the high-income range, but generally speaking, the median and mode of male and female employees' income are not much different.
 
-```{r echo=FALSE,warning=FALSE,fig.height=6, fig.width= 20, fig.cap="correlation plot and density plot"}
+The first plot shows the correlations among total yearly compensation, years of experience and education level. The result was unexpected. Education level and years of work experience affect the salary level to a certain extent, but not exactly as we imagined. Generally speaking, a Ph.D. has a significant advantage in salary. For other education level, perhaps a higher degree has certain advantages when first enter the job, but with the accumulation of work experience, such advantages become less obvious. Of course, more work experience does mean more salaries in this plot. As is shown in the plot that the blue line represents mean value, it's obvious that majority of graduates obtain salaries below average.
+Also, I make comparisons of total yearly compensation among race and gender.To relief, neither of these factors have a significant impact on salary.It can be seen that male employees have certain advantages in the high-income range, but generally speaking, the median and mode of male and female employees’ income are not much different. The plot is attached in appendix.
+
+```{r echo=FALSE,warning=FALSE,fig.height=3,fig.width=6,fig.cap="Make comparison among job titles"}
+# salary and title(volin plot)
+dat3<- data_salary %>%
+  count(company,title,level,Education)
+data_salary %>% ggplot(aes(x =log(totalyearlycompensation), y =  title, fill = title)) +
+  geom_density_ridges() +
+   scale_fill_viridis(discrete=TRUE) +
+   scale_color_viridis(discrete=TRUE) +
+  theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8))
+```
+
+```{r echo=FALSE,warning=FALSE,fig.height=3,fig.width=5,fig.cap="Make comparison among compaines"}
+# salary and company
+dat_company %>%
+  ggplot(aes(y=company, x=log(totalyearlycompensation), fill=company)) +
+    geom_density_ridges(alpha=0.6, stat="binline", bins=20) +
+    xlab("log total yearly compensation") +
+    ylab("company")+
+   theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8)
+    )
+
+```
+
+The plots above respectively show the relationship between job titles, companies and total yearly compensations. Apparently, both of them exert effect on total yearly compensations. When it comes to job titles, software engineering manager and product manager seems enjoy better salary treatments. Besides, when it comes to companies, Google, Facebook and Salesforce obtain higher employees' salaries, whereas IBM's salaries are less attractive. When analyze staff salaries are related to which factors, both can be used as the basis for grouping staff.
+
+
+```{r echo=FALSE,warning=FALSE,fig.height=4, fig.width=6, fig.cap="correlation plot of variables"}
 library(ggcorrplot)
 data_num<- df_1[,c(10,11,13,14,15,33,34)]
-#data_num$totalyearlycompensation<-data_num$totalyearlycompensation/1000
-data_num$basesalary<- data_num$basesalary/1000
-data_num$bonus<- data_num$bonus/1000
-data_num$stockgrantvalue<- data_num$stockgrantvalue/1000
+data_num$basesalary<- log(data_num$basesalary)
+data_num$bonus<- log(data_num$bonus+1)
+data_num$stockgrantvalue<- log(data_num$stockgrantvalue+1)
 corr <- cor(data_num)
-p5<- ggcorrplot(corr,
+ggcorrplot(corr,
   hc.order = TRUE, type = "lower",
   outline.color = "white",
   ggtheme = ggplot2::theme_gray,
   colors = c("#6D9EC1", "white", "#E46726")
 )
-
-p6<- ggplot(df_1, aes(log(totalyearlycompensation), colour= title)) + 
-  geom_density(aes(y = ..density..), alpha=0.3) + 
-  geom_density(aes(colour = title)) +
-  xlab("log totalcomensation") +
-  ylab("density")
-
-grid.arrange(p5,p6,nrow=1)
 ```
-Finally, make preliminary preparations for the establishment of the model. Use correlation plot to observe the correlation between the selected independent variables. At the same time, according to the distribution chart, it can be seen that the salary distributions of different job titles are different, which will be selected as the basis for grouping. Since the number of company in the data set is 1085, which is too large for grouping, so it's more proper to choose title.
+
+Finally, make preliminary preparations for the establishment of the model. I use correlation plot to observe the correlation between the selected independent variables. The color depth reflects the size of the correlation, where red represents a positive correlation, and blue represents a negative correlation. As is seen in the plot, the factors above al have a certain impact on salary. Since the number of company in the data set is 1085, which is too large for grouping. However, the 21 most frequent companies contain most of the data in the data set, so companies can be used as the basis for grouping. 
 
 ### Model Fitting
 
-```{r include=FALSE}
-model2<- lmer(log(totalyearlycompensation)~ yearsofexperience + yearsatcompany + gender + race + edu_level + (1+yearsofexperience|title)+(1+ gender|title)+(1+race|title)+(1+edu_level|title)+(1+yearsatcompany|title), data=df_1)
-summary(model2)
-```
+In this section, use multilevel model to make analysis on which factors will exert influence on salary. Multilevel models are particularly appropriate for research designs where data for participants are organized at more than one level. Given on the information and conclusions above, taking years of experience, years at company, education level, gender, race into considerations are proper. Next, we need to build a model to group all the data in the data set according to the company, and calculate the coefficients of each group through the model. By comparing these coefficients, we can draw some more robust conclusions: for example, which company’s data science jobs have higher salaries.
+
+For precise analysis, I select a sub-dataset which is consist of 21 most frequent companies.
 And to see the fixed effects below, all variables are significant at alpha = 0.05 level.
 
 |                     |Estimate   |Std. Error  |df        |t value  |Pr(>&#124;t&#124;) |
 |:---:                |:---:      |:---:       |:---:     |:---:    |:---:              |
-|(Intercept)          |11.563570  |0.077259    |16.75     |149.673  |6.34e-13 ***       |
-|yearsofexperience    |0.042733   |0.002434    |24.53     |17.557   |2.10e-15 ***       |
-|yearsatcompany       |-0.017426  |0.001073    |12.21     |-16.243  |2.99e-06 ***       |
-|gender               |0.065774   |0.013228    |10.98     |4.972    |1.21e-09 ***       |
-|race                 |-0.018349  |0.003658    |10.98     |-5.016   |1.21e-09 ***       |
-|edu_level            |0.103877   |0.013031    |10.98     |7.972    |1.21e-09 ***       |
+|(Intercept)          |11.48407   |0.06430     |16.75     |136.28   |5.28e-12 ***       |
+|yearsofexperience    |0.03621    |0.00351     |24.53     |15.713   |6.21e-18 ***       |
+|yearsatcompany       |0.00722    |0.00752     |12.21     |13.214   |2.09e-05 ***       |
+|gender               |0.06030    |0.01336     |10.98     |5.083    |2.27e-07 ***       |
+|race                 |-0.01380   |0.00654     |10.98     |-5.033   |2.31e-06 ***       |
+|edu_level            |0.09008    |0.01092     |10.98     |6.096    |3.15e-08 ***       |
 
-
+\newpage
 ## Result
 
 ### Model Coefficients
 
 Given the model fit above, we can conclude this formula: 
-$$y= 11.56 + 0.043x_1 - 0.017x_2 + 0.066x_3 - 0.018x_4   + 0.104x_5$$
+$$y= 11.484 + 0.036x_1 - 0.007x_2 + 0.060x_3 - 0.014x_4   + 0.090x_5$$
 Let $x1=yearsofexperoenve$, $x2=yearsatcompany$, $x3=gender$, $x4=gender$, $x5=education level$, 
 $y=log(totalyearlycompensation)$.
 
-Since the magnitude value of total yearly compensation, in order to avoid the coefficient of the regression formula being too large, use log instead. The education level and ethnicity are assigned separately and added as independent variables to the regression model.So the formula contains two continuous variables and three discrete variables.Perhaps the coefficient of years at company is a bit strange, cause according to common sense, as the working time in the company increases, the rank will increase to a certain extent, which means salaries are supposed to rise, and the coefficient should be positive.However, the few years of working in the company does not mean that the staff is a novice. Some experienced employees will choose to quit, which means that even if they don’t stay in the new company for a long time, they still get a good salary with their rich experience. 
 
-As for different job title, the degree of influence on each independent variable is different.I choose the representative job titles below: 
+Since the magnitude value of total yearly compensation, in order to avoid the coefficient of the regression formula being too large, I use log instead. The education level and ethnicity are assigned separately and added as independent variables to the regression model.So the formula contains two continuous variables and three discrete variables.
 
-|Job Title                     |(Intercept) |yearsofexperience |gender     |race        |edu_level
-|:---:                         |:---:       |:---:             |:---:      |:---:       |:---:
-|Software Engineer             |11.78       |0.041             |0.042      |-0.023      |0.111
-|Data Scientist                |11.50       |0.043             |0.056      |-0.020      |0.159
-|Business Analyst              |10.95       |0.048             |0.057      |-0.012      |0.080
-|Hardware Engineer             |11.29       |0.045             |0.049      |-0.021      |0.133
-|Software Engineering Manager  |13.53       |0.024             |0.092      |-0.022      |0.080
-|Recruiter                     |11.91       |0.040             |0.057      |-0.008      |0.068
+As for various job title in different companies, the degree of influence on each independent variable is different.I choose the representative job titles below: 
 
-Maybe the distinction of the coefficients can be explained in this way: Let's take education level as example. It seems that education level have the most significant impact on data scientist and the least impact on recruiter. Simply analyze the data set and findings can be interesting: that is, in the recruiter, most of the staff are undergraduates, while in data scientist, the staff’s education level are mainly focused on undergraduates, masters, and PhD degrees, so they can compare the impact of education level on salary. Moreover, when it comes to years of experience, the coefficient of software engineering manager is lowest since majority of software engineering manager all have extensive work experience and have worked for more than 8 years, as a result, the decisiveness of work experience is greatly reduced.
+
+|Company           |(Intercept) |Data Scientist    |Software Engineer       |Sales       |Product Designer
+|:---:             |:---:       |:---:             |:---:                   |:---:       |:---:
+|Amazon            |11.50       |0.380             |0.386                   |0.384       |0.316
+|Apple             |11.74       |0.072             |0.185                   |-0.600      |0.227
+|Facebook          |11.66       |0.303             |0.481                   |-0.112      |0.358
+|Google            |11.71       |0.186             |0.273                   |0.068       |0.255
+|Jpmorgan chase    |11.20       |0.217             |0.173                   |0.326       |0.217
+|Microsoft         |11.65       |0.226             |0.159                   |0.278       |0.194
+
+Here are the brief interpretation of the coefficients above: These coefficients reflect to some extent the company's demand for these job titles. The higher the coefficient, the greater the positive impact of these job titles on salary, and it also shows that the company is more willing to pay higher salaries for these job titles. I select 6 top companies and 4 representative job titles to make comparison. Take Apple Inc as example: From the coefficient in the table, Apple attach more importance on product designer than other job titles, which is reasonable that Apple launches new products every year, and updates and enhancements in the previously more mature versions require broad forward-looking and in-depth understanding of the market for the product design team.
+If we focus on Data Scientist, it seems that it is well-demanded in most companies in the form, in which Amazon and Facebook can be the better choice since the higher coefficient, however the result depends cause we also need to combine the basesalary in each company to make more ideal options.
+When it comes to the comparison among job titles and companies, using radar plot can be more intuitive. The plots are contained in appendix.
 
 ### Model validation
 
-```{r echo=FALSE, fig.height=3, fig.width=8, fig.cap="Residual plot and Q-Q plot."}
-re <- plot(model2)
-qq <- qqmath(model2)
-grid.arrange(re,qq,nrow=1)
+Model validation is the task of confirming the outputs of a statistical model have enough fidelity to the outputs of the data-generating process that the objectives of the investigation can be achieved. In this section, I use the function "check_model" in package "performance" to realize it. The plots are shown in appendix, respectively reflect diverse aspects of fitting models.
+In the linearity and homogeneity of variance part, the reference lines are flat and horizontal. For the collinearity plot, the higher bar(>5) indicate potential collinearity issues, and in this plot all the bars are below that. When it comes to influential observations, points are inside the contour line. And in normality of residuals, dots fall along the line, meaning the distribution is close to the normal curve. So are the dots in normality of random effects plot. As a result, the model does make sense.
 
-```
-
-```{r echo=FALSE, fig.height=3, fig.width=8, fig.cap="Residuals vs Leverage."}
-ggplot(data.frame(lev=hatvalues(model2),pearson=residuals(model2,type="pearson")),
-      aes(x=lev,y=pearson)) +
-    geom_point() +
-    theme_bw()
-```
-From the Residual plots in Figure 4 we can see that the mean of residuals is almost 0, which means this plot makes sense. As for the Q-Q plot ,the majority of dots are on the lines so the normality is good except for some of samples may distribute as a fat tail. Figure 5 shows that there are not obvious leverage point.
 
 ## Discussion
 
-In a sense, this model is reasonable.Relatively speaking, a person with many years of work experience and a higher degree is indeed more likely to get a higher salary. At the same time, in the sample of this data set, men are slightly better than women in both the number and salary in the STEM field. But this does not mean that women will be inferior to men in the field of STEM.
+In a sense, this model is reasonable.Relatively speaking, a person with many years of work experience and a higher degree is indeed more likely to get a higher salary. At the same time, in the sample of this data set, men are slightly better than women in both the number and salary in the STEM field. But this does not mean that women will be inferior to men in the field of STEM.And in different companies, these factors do have different effects, that's why we use multilevel model to make this analysis.
 
-In fact, there are many factors that can be taken into consideration in this analysis. For example, the salary level of different companies will be different, but because there are 1085 companies in the table, it is difficult to distinguish them according to their types, because some companies are comprehensive companies involving multiple fields. At the same time, analyzing correlation of the salary and state, it can be found that the salary level of each state will also be different. However, there are too many factors involved in the salary difference between state and state, such as policy factors, economic development level, etc., and it is difficult to conduct further analysis only through the factors in the table.
+In fact, there are many factors that can be taken into consideration in this analysis. For example, as is mentioned above, cause there are 1085 companies in the table, I select 21 companies contained majority of data instead. Nevertheless, if the companies can be grouped into types, like tech company, investment company, service company etc., we can compare salaries of companies in same type or distinct types.At the same time, analyzing correlation of the salary and state, it can be found that the salary level of each state will also be different. However, there are too many factors involved in the salary difference between state and state, such as policy factors, economic development level, etc., and it is difficult to conduct further analysis only through the factors in the table.
 
 \newpage
-## Appendix
-### More EDA
+# Appendix
+
+## More EDA
+
+### Redar Plot
+
+```{r,echo=FALSE, fig.height=5, fig.width=8,warning=FALSE}
+df_6<- df_1 %>% filter(title=="Data Scientist" | title=="Software Engineer" |title== "Sales" | title=="Product Designer")
+#df_8<- df_6 %>% filter(title=="Sales")
+#table(df_8$yearsofexperience)
+df_7<- df_1 %>% filter(company=="amazon"|company=="microsoft"|company=="apple"|company=="facebook"|company=="google"|company=="jpmorgan chase")
+radar_data1 <- df_6 %>% group_by(title) %>% dplyr::summarise(
+  edu_level = mean(edu_level), race=mean(race),
+  yearsofexperience = mean(yearsofexperience), yearsatcompany = mean(yearsatcompany), 
+  totalyearlycompensation = mean(totalyearlycompensation)
+)
+
+radar_data2 <- df_7 %>% group_by(company) %>% dplyr::summarise(
+  edu_level = mean(edu_level), race=mean(race),
+  yearsofexperience = mean(yearsofexperience), yearsatcompany = mean(yearsatcompany), 
+  totalyearlycompensation = mean(totalyearlycompensation)
+)
+# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each variable to show on the plot!
+
+# Set graphic colors
+coul <- brewer.pal(3, "BuPu")
+colors_border <- coul
+colors_in <- alpha(coul,0.4)
+rownames(radar_data1) <- radar_data1$title
+rownames(radar_data2) <- radar_data2$company
+```
+
+```{r,echo=FALSE, fig.height=5, warning=FALSE,fig.width=8,warning=FALSE}
+radarchart(radar_data1[,-1], axistype=1 , maxmin=F,
+    #custom polygon
+    pcol= colors_border , pfcol=colors_in , plwd=1 , plty=1,
+    #custom the grid
+    cglcol="grey", cglty=1, axislabcol="black", cglwd=1, 
+    #custom labels
+    vlcex=0.8 
+    )
+legend(x= 0.7, y= 1.4, legend = rownames(radar_data1), bty = "n", pch=15, col=colors_in , text.col = "grey", cex=0.8, pt.cex=0.8)
+```
+
+```{r,echo=FALSE, fig.height=5, fig.width=8,warning=FALSE}
+radarchart(radar_data2[,-1], axistype=1 , maxmin=F,
+    #custom polygon
+    pcol= colors_border , pfcol=colors_in , plwd=1 , plty=1,
+    #custom the grid
+    cglcol="grey", cglty=1, axislabcol="black", cglwd=1, 
+    #custom labels
+    vlcex=0.8 
+    )
+legend(x= 0.7, y= 1.4, legend = rownames(radar_data2), bty = "n", pch=10, col=colors_in , text.col = "grey", cex=0.8, pt.cex=0.8)
+
+```
+
+### violin plot
+
+```{r,echo=FALSE,warning=FALSE,fig.height=4,fig.width=6}
+# violin plot(salary, gender and race)
+ggplot(df_2,aes(fill=gender, y=log(totalyearlycompensation), x=Race)) + 
+    geom_violin(position="dodge", alpha=0.5, outlier.colour="transparent") +
+    scale_fill_viridis(discrete=T, name="") +
+    xlab("race") +
+    ylab("log total yearly experience") +
+    geom_hline(aes(yintercept=mean),colour="blue", linetype = "twodash",size=1)+
+  theme(legend.position = "top")
+```
+
 ### Density plot
-```{r echo=FALSE,warning=FALSE,fig.height=4, fig.width= 8}
+
+```{r echo=FALSE,warning=FALSE,fig.height=5, fig.width= 10}
 #dat1<- data_salary %>% count(company)
 #wordcloud2(dat1,size=3,color='random-dark')
-
 # Density plot
 ## years of experience distribution
 ggplot(data_salary, aes(x=yearsofexperience))+
@@ -333,9 +398,9 @@ ggplot(data=df_2, aes(x=log(totalyearlycompensation),group=Education, fill = Edu
     ylab("density") 
 ```
 
-### Lollipop 
-### Count of company in each state 
-```{r echo=FALSE,warning=FALSE,fig.height=6, fig.width= 10}
+### Lollipop (Count of company in each state )
+
+```{r echo=FALSE,warning=FALSE,fig.height=7, fig.width=15}
 ## company in states distribution
 dat6<- dat_usa %>% count(states)
 ggplot(dat6, aes(x=states, y=log(n)))+
@@ -347,9 +412,9 @@ ggplot(dat6, aes(x=states, y=log(n)))+
     ylab("log frequency") 
 ```
 
-### Circular Bar Plot
-### Distribution of job title in each educaiton level
-```{r echo=FALSE,warning=FALSE,fig.height=5, fig.width= 8}
+### Circular Bar Plot( Distribution of job title in each educaiton level)
+
+```{r echo=FALSE,warning=FALSE,fig.height=6, fig.width= 15}
 ## compare job title and education level
 data_title<- df_2 %>% count(Education,title)
 data<- data_title
@@ -385,31 +450,55 @@ p+theme_minimal() +
   
 ```
 
-
 \newpage
 ### Full Results
-Random effects of model
-```{r echo=FALSE}
+
+```{r echo=FALSE,warning=FALSE}
 df_1 <- data_salary %>% 
   na.omit() %>%
   filter(country == "United States")
 df_1$gender[df_1$gender == "Male"]<- "1"
 df_1$gender[df_1$gender == "Female"]<- "0"
 df_1$gender<- as.numeric(df_1$gender)
+
 df_1$race <- ifelse(df_1$Race_Asian == 1,1,
                                   ifelse(df_1$Race_White == 1,2,
                                         ifelse(df_1$Race_Two_Or_More == 1,3,
                                                ifelse(df_1$Race_Black == 1,4,
                                                       ifelse(df_1$Race_Hispanic == 1,5,0
                                                         )))))
-model2<- lmer(log(totalyearlycompensation)~ yearsofexperience + yearsatcompany + gender + race + edu_level + (1+yearsofexperience|title)+(1+ gender|title)+(1+race|title)+(1+edu_level|title)+(1+ yearsatcompany|title), data=df_1)
+company_counts <- df_1 %>%
+    group_by(company) %>%
+    tally
+# get names of the company with counts > 120
+frequent_company <-  company_counts %>%
+    filter(n >= 120) %>%
+    select(company)
+# filter out the most-frequent companies
+df_3 <- df_1 %>%
+    filter(company %in% frequent_company$company)
+model2<- stan_lmer(log(totalyearlycompensation)~ yearsofexperience + yearsatcompany + gender + race + edu_level + (1+yearsofexperience+gender+race+edu_level+yearsatcompany+title|company), data=df_3, refresh=0)
+
+```
+
+### model checking
+```{r,echo=FALSE,fig.height=20,fig.width=25,warning=FALSE}
+check_model(model2)
+```
+
+### Randomc effects of model
+```{r,echo=FALSE,warning=FALSE}
 ranef(model2)
 ```
-Fixed effects of model
-```{r,echo=FALSE}
+
+### Fixed effects of model
+```{r,echo=FALSE,warning=FALSE}
 fixef(model2)
 ```
-Coefficients of model
-```{r echo=FALSE}
+
+### Coefficients of model
+```{r,echo=FALSE,warning=FALSE}
 coef(model2)
 ```
+
+
